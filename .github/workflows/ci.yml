@@ -1,0 +1,64 @@
+name: CI
+
+# The instance must start from nothing, create only the two exchanges, remove the default user, keep every login inside
+# its permissions, apply the limits, publish no AMQP port, publish the management UI to the loopback only in dev and
+# survive a restart (ADR-036). The same composition is checked twice: as dev and as qa/main.
+
+on:
+  pull_request:
+    branches: [develop, qa, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  instance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      COMPOSE_PROJECT_NAME: csp-ci-rabbitmq
+      COMPOSE_PATH_SEPARATOR: ":"
+      RABBIT_ADMIN_PASSWORD: ci-admin-password
+      WORKER_RELAY_PASSWORD: ci-relay-password
+      TICKETING_FULFILLMENT_PASSWORD: ci-ticketing-password
+      CONCESSIONS_PASSWORD: ci-concessions-password
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the shell scripts and the definitions template
+        run: |
+          for f in scripts/*.sh tests/*.sh; do sh -n "$f"; done
+          python3 -c "import json; json.load(open('rabbitmq/definitions.json.template'))"
+
+      - name: Validate the composition
+        run: |
+          docker network create platform
+          COMPOSE_FILE=compose.yml:compose.dev.yml docker compose config --quiet
+          COMPOSE_FILE=compose.yml docker compose config --quiet
+
+      - name: Start the instance as dev
+        run: COMPOSE_FILE=compose.yml:compose.dev.yml docker compose up -d --wait rabbitmq
+
+      - name: Check exchanges, logins, permissions, limits, ports and restart as dev
+        run: COMPOSE_FILE=compose.yml:compose.dev.yml sh tests/instance.sh dev
+
+      - name: Start the instance as qa and main
+        run: |
+          COMPOSE_FILE=compose.yml:compose.dev.yml docker compose down -v
+          COMPOSE_FILE=compose.yml docker compose up -d --wait rabbitmq
+
+      - name: Check that nothing is published as qa and main
+        run: COMPOSE_FILE=compose.yml sh tests/instance.sh qa
+
+      - name: Show the log when a step failed
+        if: failure()
+        run: COMPOSE_FILE=compose.yml docker compose logs rabbitmq
+
+      - name: Clean up
+        if: always()
+        run: COMPOSE_FILE=compose.yml docker compose down -v
