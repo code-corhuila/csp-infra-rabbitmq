@@ -1,2 +1,2 @@
-# Shell scripts run inside Linux containers: never let Git convert them to CRLF.
-*.sh text eol=lf
+# Files are mounted into Linux containers (rabbitmq.conf, the definitions template) or run there: never let Git convert them to CRLF.
+* text=auto eol=lf
