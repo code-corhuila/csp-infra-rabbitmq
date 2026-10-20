@@ -1,0 +1,2 @@
+# Files are mounted into Linux containers (rabbitmq.conf, the definitions template) or run there: never let Git convert them to CRLF.
+* text=auto eol=lf
