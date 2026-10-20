@@ -1,0 +1,55 @@
+# The single RabbitMQ instance of the platform (ADR-036): the exchanges cine.events and cine.dlx, one login per domain
+# and the limits of the queues. The project name comes from COMPOSE_PROJECT_NAME of the env file (csp-dev, csp-qa,
+# csp-main), so every environment has its own container and volume (J.5.1).
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    # The definitions are rebuilt at every start from the template and the environment, never stored in the
+    # repository. The passwords enter only as salted SHA-256 hashes (base64 of salt + sha256(salt + password)) and the
+    # result lives inside the container.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -eu
+        hash_password() {
+          salt=$$(openssl rand -hex 4)
+          { printf '%s' "$$salt" | xxd -r -p; { printf '%s' "$$salt" | xxd -r -p; printf '%s' "$$1"; } | openssl dgst -sha256 -binary; } | base64 | tr -d '\n'
+        }
+        sed -e "s|@RABBIT_ADMIN_HASH@|$$(hash_password "$$RABBIT_ADMIN_PASSWORD")|" \
+            -e "s|@WORKER_RELAY_HASH@|$$(hash_password "$$WORKER_RELAY_PASSWORD")|" \
+            -e "s|@TICKETING_FULFILLMENT_HASH@|$$(hash_password "$$TICKETING_FULFILLMENT_PASSWORD")|" \
+            -e "s|@CONCESSIONS_HASH@|$$(hash_password "$$CONCESSIONS_PASSWORD")|" \
+            /etc/rabbitmq/definitions.json.template > /etc/rabbitmq/definitions.json
+        chown rabbitmq:rabbitmq /etc/rabbitmq/definitions.json
+        chmod 400 /etc/rabbitmq/definitions.json
+        exec docker-entrypoint.sh rabbitmq-server
+    environment:
+      RABBIT_ADMIN_PASSWORD: ${RABBIT_ADMIN_PASSWORD:?set RABBIT_ADMIN_PASSWORD}
+      WORKER_RELAY_PASSWORD: ${WORKER_RELAY_PASSWORD:?set WORKER_RELAY_PASSWORD}
+      TICKETING_FULFILLMENT_PASSWORD: ${TICKETING_FULFILLMENT_PASSWORD:?set TICKETING_FULFILLMENT_PASSWORD}
+      CONCESSIONS_PASSWORD: ${CONCESSIONS_PASSWORD:?set CONCESSIONS_PASSWORD}
+    volumes:
+      - ./rabbitmq/definitions.json.template:/etc/rabbitmq/definitions.json.template:ro
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/conf.d/20-csp.conf:ro
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - rabbitmq-diagnostics -q check_running && rabbitmqctl --silent authenticate_user rabbit_admin "$$RABBIT_ADMIN_PASSWORD"
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+    # expose, not ports: the broker is reachable only from the platform network. The management UI is published to the
+    # loopback of the host only in dev (compose.dev.yml).
+    expose: ["5672", "15672"]
+    networks: [platform]
+
+volumes:
+  rabbitmq-data:
+
+networks:
+  platform:
+    name: platform
+    external: true

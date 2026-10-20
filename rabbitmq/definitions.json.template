@@ -1,0 +1,27 @@
+{
+  "rabbit_version": "3.13",
+  "users": [
+    { "name": "rabbit_admin", "password_hash": "@RABBIT_ADMIN_HASH@", "hashing_algorithm": "rabbit_password_hashing_sha256", "tags": ["administrator"] },
+    { "name": "worker_relay", "password_hash": "@WORKER_RELAY_HASH@", "hashing_algorithm": "rabbit_password_hashing_sha256", "tags": [] },
+    { "name": "ticketing_fulfillment", "password_hash": "@TICKETING_FULFILLMENT_HASH@", "hashing_algorithm": "rabbit_password_hashing_sha256", "tags": [] },
+    { "name": "concessions", "password_hash": "@CONCESSIONS_HASH@", "hashing_algorithm": "rabbit_password_hashing_sha256", "tags": [] }
+  ],
+  "vhosts": [
+    { "name": "/" }
+  ],
+  "permissions": [
+    { "user": "rabbit_admin", "vhost": "/", "configure": ".*", "write": ".*", "read": ".*" },
+    { "user": "worker_relay", "vhost": "/", "configure": "^$", "write": "^cine[.]events$", "read": "^$" },
+    { "user": "ticketing_fulfillment", "vhost": "/", "configure": "^cine[.]ticketing_fulfillment[.]", "write": "^(cine[.]ticketing_fulfillment[.].*|cine[.]dlx)$", "read": "^(cine[.]ticketing_fulfillment[.].*|cine[.]events|cine[.]dlx)$" },
+    { "user": "concessions", "vhost": "/", "configure": "^cine[.]concessions[.]", "write": "^(cine[.]concessions[.].*|cine[.]dlx)$", "read": "^(cine[.]concessions[.].*|cine[.]events|cine[.]dlx)$" }
+  ],
+  "exchanges": [
+    { "name": "cine.events", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false, "internal": false, "arguments": {} },
+    { "name": "cine.dlx", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false, "internal": false, "arguments": {} }
+  ],
+  "queues": [],
+  "bindings": [],
+  "policies": [
+    { "name": "cine-limits", "vhost": "/", "pattern": "^cine[.]", "apply-to": "queues", "priority": 0, "definition": { "max-length": 10000, "overflow": "reject-publish", "message-ttl": 604800000 } }
+  ]
+}
