@@ -34,6 +34,7 @@ jobs:
         run: |
           for f in scripts/*.sh tests/*.sh; do sh -n "$f"; done
           python3 -c "import json; json.load(open('rabbitmq/definitions.json.template'))"
+          python3 tests/env_urls.py
 
       - name: Validate the composition
         run: |

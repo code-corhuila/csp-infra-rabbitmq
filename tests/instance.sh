@@ -37,6 +37,7 @@ ctl() { docker compose exec -T rabbitmq rabbitmqctl --quiet "$@" 2>&1; }
 login() { ctl authenticate_user "$1" "$2"; }
 
 # ---- exchanges, queues, users, permissions, policy ----
+expect "the default vhost / exists (the AMQP URLs name it %2F)" "$(printf '/')" "$(ctl list_vhosts name)"
 exchanges=$(ctl list_exchanges name type durable)
 expect "cine.events is a durable topic exchange" "$(printf 'cine.events\ttopic\ttrue')" "$exchanges"
 expect "cine.dlx is a durable topic exchange" "$(printf 'cine.dlx\ttopic\ttrue')" "$exchanges"
