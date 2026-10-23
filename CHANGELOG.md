@@ -24,3 +24,10 @@ All notable changes of `csp-infra-rabbitmq` are recorded here. The format follow
 
 - `README.md` describes the instance, its variables, its logins, its permission patterns and the naming of the queues,
   and cites ADR-036.
+
+### Fixed
+
+- The `RELAY_AMQP_URL`, `TICKETING_AMQP_URL` and `CONCESSIONS_AMQP_URL` of the env examples and the README end in `/%2F`
+  (the default vhost `/` URL-encoded) instead of a bare `/`, which the Java amqp-client and Spring AMQP read as an empty
+  vhost ("vhost not found"). `tests/env_urls.py` parses every URL of the examples and the README, and `tests/instance.sh`
+  checks that the vhost `/` exists on the broker (HU-AUTH-004).
