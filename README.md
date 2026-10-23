@@ -36,9 +36,11 @@ secret of the environment, never from the repository.
 | `RABBIT_ADMIN_PASSWORD` | password of `rabbit_admin` |
 | `WORKER_RELAY_PASSWORD` | password of `worker_relay` |
 | `TICKETING_FULFILLMENT_PASSWORD`, `CONCESSIONS_PASSWORD` | passwords of the consumer logins |
-| `RELAY_AMQP_URL`, `TICKETING_AMQP_URL`, `CONCESSIONS_AMQP_URL` | what the services read: `amqp://<login>:<password>@rabbitmq:5672/` |
+| `RELAY_AMQP_URL`, `TICKETING_AMQP_URL`, `CONCESSIONS_AMQP_URL` | what the services read: `amqp://<login>:<password>@rabbitmq:5672/%2F` |
 
 Passwords go inside the URLs, so they must be URL-safe: `openssl rand -hex 24`.
+
+The URLs end in `/%2F`, the default vhost `/` URL-encoded. An unencoded trailing slash is an empty vhost for some clients (the Java amqp-client and Spring AMQP), so the broker answers "vhost not found"; other clients (Python pika, Go amqp091) read it as `/`, which makes `%2F` the portable form.
 
 ## How to run
 
