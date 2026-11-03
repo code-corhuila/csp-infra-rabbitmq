@@ -5,6 +5,8 @@ All notable changes of `csp-infra-rabbitmq` are recorded here. The format follow
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-11-03
+
 ### Added
 
 - The single RabbitMQ instance of the platform for the domain events (ADR-036): `compose.yml` with the pinned image
