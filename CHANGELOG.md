@@ -27,6 +27,10 @@ All notable changes of `csp-infra-rabbitmq` are recorded here. The format follow
 
 ### Fixed
 
+- The broker no longer stops at start with `eacces` on `/var/lib/rabbitmq/.erlang.cookie` (csp-infra-rabbitmq#10): the
+  health check runs as the `rabbitmq` user, so the first check can no longer create the cookie as root while the server
+  boots. `tests/erlang_cookie.sh` checks the owner of the cookie and 10 starts from an empty volume, and the CI runs it.
+
 - The `RELAY_AMQP_URL`, `TICKETING_AMQP_URL` and `CONCESSIONS_AMQP_URL` of the env examples and the README end in `/%2F`
   (the default vhost `/` URL-encoded) instead of a bare `/`, which the Java amqp-client and Spring AMQP read as an empty
   vhost ("vhost not found"). `tests/env_urls.py` parses every URL of the examples and the README, and `tests/instance.sh`
