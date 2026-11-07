@@ -56,6 +56,9 @@ jobs:
       - name: Check that nothing is published as qa and main
         run: COMPOSE_FILE=compose.yml sh tests/instance.sh qa
 
+      - name: Check the Erlang cookie owner and 10 starts from an empty volume
+        run: COMPOSE_FILE=compose.yml sh tests/erlang_cookie.sh 10
+
       - name: Show the log when a step failed
         if: failure()
         run: COMPOSE_FILE=compose.yml docker compose logs rabbitmq
