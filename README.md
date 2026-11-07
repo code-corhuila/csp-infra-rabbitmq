@@ -104,6 +104,10 @@ the template, the variable and the tests.
 - **No secret is versioned.** `env/*.env.example` carries names and placeholders only.
 - **Single node, named volume.** Durable queues and persistent messages survive a restart; a lost volume loses the queues
   (the events stay in the outbox).
+- **The health check runs as `rabbitmq`** (`su-exec rabbitmq`), never as root: the first check can run while the server is
+  still booting, and as root it would create `/var/lib/rabbitmq/.erlang.cookie` owned by root with mode 400, which the
+  server (user `rabbitmq`) cannot read (`eacces`). Run `rabbitmqctl` by hand as `rabbitmq` too on a fresh volume:
+  `docker compose exec -u rabbitmq rabbitmq rabbitmqctl status`.
 - The definitions are imported at every start; a login or a permission removed from the template is not removed from an
   existing volume (use `rabbitmqctl`, or drop the volume in dev).
 
@@ -117,6 +121,11 @@ declares its queue and DLQ, binds, consumes, dead-letters with a `nack` and cann
 another service's queues, an oversized message is rejected and a full queue rejects the publish. `tests/instance.sh qa`
 checks that nothing is published. Both print their totals and fail if no check ran. By hand, set the four passwords,
 `COMPOSE_PROJECT_NAME` and the compose files, and run `sh tests/instance.sh dev`.
+
+`tests/erlang_cookie.sh [starts]` guards the ownership of the Erlang cookie: it runs the health check of the composition
+before any server exists and checks that the cookie belongs to `rabbitmq`, then starts the instance from an empty volume
+`starts` times (default 10), runs the health check as soon as the container runs and requires each start to end healthy.
+It removes the volume, so run it on a throwaway project name, never on `csp-dev`.
 
 ## Branching
 
