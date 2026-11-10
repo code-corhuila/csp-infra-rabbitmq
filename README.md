@@ -97,6 +97,10 @@ the template, the variable and the tests.
 
 - Policy `cine-limits` over the queues `^cine[.]`: `max-length` 10000, `overflow` `reject-publish`, `message-ttl` 7 days.
   A full queue rejects the publishes of the relay, so the outbox rows wait in `PENDING`.
+- Policy `cine-ticket-issued-sink` over the queue `^cine[.]ticketing_fulfillment[.]ticket-issued$`, priority 10 (a queue gets only the policy
+  with the highest priority, so it repeats the figures): `max-length` 10000, `overflow` `drop-head`, `message-ttl` 7 days. That queue exists only
+  so that the relay can route `TicketIssued` and **has no consumer**; a full one must not reject the relay, so the oldest event is dropped (and
+  dead-lettered to its DLQ) instead. When a consumer of the event exists, remove this policy (ADR-070).
 - `max_message_size` 131072 bytes; `disk_free_limit` 1 GB and `vm_memory_high_watermark` 0.4, in `rabbitmq/rabbitmq.conf`.
 
 ## Rules

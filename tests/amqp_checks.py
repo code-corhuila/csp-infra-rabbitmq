@@ -224,6 +224,39 @@ def check_limits():
     delete_queues(service, "limits")
 
 
+def check_ticket_issued_sink():
+    """The queue of TicketIssued has no consumer (the relay only needs a route): it never rejects the relay (ADR-070)."""
+    service = "ticketing_fulfillment"
+    connection = connect(service)
+    channel = connection.channel()
+    queue, dlq = declare_consumer_topology(channel, service, "ticket-issued", "cine.ticketing_fulfillment.ticket-issued.v1")
+    relay = connect("worker_relay")
+    relay_channel = relay.channel()
+    relay_channel.confirm_delivery()
+    extra = 5
+    accepted = 0
+    rejected = False
+    try:
+        for _ in range(MAX_LENGTH + extra):
+            relay_channel.basic_publish(EVENTS, "cine.ticketing_fulfillment.ticket-issued.v1", b"{}", mandatory=True)
+            accepted += 1
+    except NackError:
+        rejected = True
+    relay.close()
+    check(f"the unconsumed ticket-issued queue accepts every publish, also past max-length ({MAX_LENGTH + extra} accepted)", not rejected and accepted == MAX_LENGTH + extra)
+    check("the ticket-issued queue keeps exactly max-length messages (drop-head)", channel.queue_declare(queue, passive=True).method.message_count == MAX_LENGTH)
+    deadline = time.time() + 10
+    dead = 0
+    while time.time() < deadline:
+        dead = channel.queue_declare(dlq, passive=True).method.message_count
+        if dead >= extra:
+            break
+        time.sleep(0.5)
+    check(f"the {extra} oldest events dropped by drop-head are dead-lettered to its DLQ", dead == extra)
+    connection.close()
+    delete_queues(service, "ticket-issued")
+
+
 def main():
     check_logins()
     check_relay()
@@ -231,6 +264,7 @@ def main():
         check_consumer_flow(consumer)
     check_foreign_queues_untouchable()
     check_limits()
+    check_ticket_issued_sink()
     print(f"amqp checks: {total} run, {total - failed} passed, {failed} failed")
     return 1 if failed or total == 0 else 0
 
