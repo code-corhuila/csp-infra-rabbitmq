@@ -61,6 +61,15 @@ expect "the limits policy covers the queues cine.*" "$(printf 'cine-limits\t^cin
 for setting in '"max-length":10000' '"overflow":"reject-publish"' '"message-ttl":604800000'; do
   expect "the limits policy sets $setting" "$setting" "$policies"
 done
+# The queue of TicketIssued has no consumer: it gets its own policy, which never rejects the relay (ADR-070).
+sink=$(printf '%s
+' "$policies" | grep 'cine-ticket-issued-sink' || true)
+expect "the ticket-issued sink policy covers only that queue" "$(printf 'cine-ticket-issued-sink	^cine[.]ticketing_fulfillment[.]ticket-issued$	queues')" "$sink"
+for setting in '"max-length":10000' '"overflow":"drop-head"' '"message-ttl":604800000'; do
+  expect "the ticket-issued sink policy sets $setting" "$setting" "$sink"
+done
+expect "the ticket-issued sink policy has priority 10 over cine-limits" "$(printf '	10')" "$sink"
+expect_not "the ticket-issued sink policy does not reject the publishes" "reject-publish" "$sink"
 
 config=$(docker compose exec -T rabbitmq cat /etc/rabbitmq/conf.d/20-csp.conf)
 expect "max_message_size is 131072" "max_message_size = 131072" "$config"

@@ -22,6 +22,7 @@
   "queues": [],
   "bindings": [],
   "policies": [
-    { "name": "cine-limits", "vhost": "/", "pattern": "^cine[.]", "apply-to": "queues", "priority": 0, "definition": { "max-length": 10000, "overflow": "reject-publish", "message-ttl": 604800000 } }
+    { "name": "cine-limits", "vhost": "/", "pattern": "^cine[.]", "apply-to": "queues", "priority": 0, "definition": { "max-length": 10000, "overflow": "reject-publish", "message-ttl": 604800000 } },
+    { "name": "cine-ticket-issued-sink", "vhost": "/", "pattern": "^cine[.]ticketing_fulfillment[.]ticket-issued$", "apply-to": "queues", "priority": 10, "definition": { "max-length": 10000, "overflow": "drop-head", "message-ttl": 604800000 } }
   ]
 }
