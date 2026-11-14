@@ -1,0 +1,6 @@
+# Development only (ADR-036): the management UI is published to the loopback of the host, never to the network. In qa
+# and main the instance is operated with rabbitmqctl inside the container. The AMQP port is never published.
+services:
+  rabbitmq:
+    ports:
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
